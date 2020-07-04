@@ -71,29 +71,47 @@ func executeAllJobs() []interface{} {
 	}(&wg)
 
 	fmt.Printf("\n BEFORE wg.Wait()... ! \n")
+
 	wg.Wait()
+
 	fmt.Printf("\n AFTER wg.Wait()... ! \n")
 
 	fmt.Printf("\n resultList : %v \n", resultList)
 
 	fmt.Printf("\n executeAllJobs() Done ! \n")
+
 	return resultList
 }
 
 func workerFunc(jobs <-chan InputDataType, results chan<- OutputDataType) {
-	for j := range jobs {
-		hashValue := getMD5Hash(j.uuid)
-		results <- OutputDataType{hash: hashValue}
+	for job := range jobs {
+		startTime := GetMillis()
+		hashValue := getMD5Hash(job)
+		fmt.Printf("\n workerFunc() : hashValue : %v \n", hashValue)
+		endTime := GetMillis()
+		timeTakenForCalculating := endTime - startTime
+		results <- OutputDataType{hash: hashValue, timeTakenForComputation: timeTakenForCalculating}
 	}
 }
 
 // ---- Helper Func ---
-func getMD5Hash(text string) string {
+func getMD5Hash(data InputDataType) string {
 	time.Sleep(2 * time.Second)
 	hasher := md5.New()
-	hasher.Write([]byte(text))
+	hasher.Write([]byte(data.uuid))
 	md5Value := hex.EncodeToString(hasher.Sum(nil))
 	return md5Value
+}
+
+/*
+GetMillis ...
+// ---- Helper Func ---
+*/
+func GetMillis() int64 {
+	now := time.Now()
+	nanos := now.UnixNano()
+	millis := nanos / 1000000
+	return millis
 }
 
 // ---- Helper Func ---
@@ -104,6 +122,9 @@ func generateUUID4() string {
 }
 
 func main() {
-	hashList := executeAllJobs()
-	fmt.Printf("%v", hashList)
+	resultData := executeAllJobs()
+	for _, item := range resultData {
+		data := item.(OutputDataType)
+		fmt.Printf("\ndata.hash : (%v) , data.timeTakenForComputation (%v) milli-secs\n", data.hash, data.timeTakenForComputation)
+	}
 }
